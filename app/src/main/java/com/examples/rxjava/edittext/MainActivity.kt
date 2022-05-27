@@ -48,7 +48,6 @@ class MainActivity : AppCompatActivity() {
             })
 
 
-            // You could to disable the inspection, to make it easier to read and
             /**
              * When I add some logic to another [EditText] (for example lets add some logic to [Decimal] edit text)
              * and add some number/digit to [Binary] edit text, then the input just display
