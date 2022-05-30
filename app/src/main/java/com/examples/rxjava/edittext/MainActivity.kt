@@ -5,10 +5,12 @@ import android.os.Bundle
 import android.util.Log
 import android.widget.EditText
 import com.examples.rxjava.edittext.databinding.ActivityMainBinding
+import com.google.android.material.textfield.TextInputEditText
 import com.jakewharton.rxbinding2.widget.RxTextView
 import io.reactivex.Observer
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.disposables.Disposable
+import java.util.*
 
 class MainActivity : AppCompatActivity() {
     private var _binding: ActivityMainBinding? = null
@@ -21,25 +23,26 @@ class MainActivity : AppCompatActivity() {
         setContentView(binding?.root)
 
         binding?.run {
-            /**
-             * Only allow user to input numbers from 0 to 1 [Integer], otherwise it will throw an error.
-             * There isn't any error handler, because this is just a sample app.
-             */
             etBinary.observeInput().subscribe(object : Observer<String> {
                 override fun onSubscribe(d: Disposable) {}
                 override fun onComplete() {}
                 override fun onNext(t: String) {
                     // store calculation data
-                    val decResult = t.fold(0L) { acc, element ->
-                        (acc * 2) + element.digitToInt(2)
-                    }
-                    val octResult = decResult.toString(8)
-                    val hexResult = decResult.toString(16).uppercase()
+                    try {
+                        Log.d("XYZ-etBinary", t);
+                        val decResult = t.fold(0L) { acc, element ->
+                            (acc * 2) + element.digitToInt(2)
+                        }
+                        val octResult = decResult.toString(8)
+                        val hexResult = decResult.toString(16).uppercase()
 
-                    // and display the results to another edit text which corresponds with their radix representation
-                    etDecimal.setText(decResult.toString())
-                    etOctal.setText(octResult)
-                    etHexadecimal.setText(hexResult)
+                        // and display the results to another edit text which corresponds with their radix representation
+                        etDecimal.setText(decResult.toString(), true)
+                        etOctal.setText(octResult, true)
+                        etHexadecimal.setText(hexResult, true)
+                    } catch (e: Throwable) {
+                        Log.e("XYZ-etBinary", e.message.toString())
+                    }
                 }
 
                 override fun onError(e: Throwable) {
@@ -47,38 +50,24 @@ class MainActivity : AppCompatActivity() {
                 }
             })
 
-
-            /**
-             * When I add some logic to another [EditText] (for example lets add some logic to [Decimal] edit text)
-             * and add some number/digit to [Binary] edit text, then the input just display
-             * only the first number. If we try to add another number/digit to the [Binary] edit text,
-             * the number/digit will not appeared.
-             *
-             * This can happen because, when we set the result from operation above (which is [Binary] operation)
-             * to another [EditText], in this example are [Decimal].
-             * Then the [Decimal] input will begin to observe its input too, because there is new data
-             * coming from the [Binary] operation.
-             *
-             * The [Decimal] edit text will do the calculations, and set the results to another [EditText],
-             * which is [Binary], [Octal] and [Hexadecimal]. [Binary] input notify there is a new data
-             * coming from [Decimal] input and will begin its calculation too.
-             *
-             * This condition is like a infinite loops.
-             * I hope my explanation above can help.
-             */
             etDecimal.observeInput().subscribe(object : Observer<String> {
                 override fun onSubscribe(d: Disposable) {}
                 override fun onComplete() {}
                 override fun onNext(t: String) {
                     // store calculation data
-                    val binResult = t.toLong().toString(2)
-                    val octResult = t.toLong().toString(8)
-                    val hexResult = t.toLong().toString(16).uppercase()
+                    try {
+                        Log.d("XYZ-etDecimal", t);
+                        val binResult = t.toLong().toString(2)
+                        val octResult = t.toLong().toString(8)
+                        val hexResult = t.toLong().toString(16).uppercase()
 
-                    // and display the results to another edit text which corresponds with their radix representation
-                    etBinary.setText(binResult)
-                    etOctal.setText(octResult)
-                    etHexadecimal.setText(hexResult)
+                        // and display the results to another edit text which corresponds with their radix representation
+                        etBinary.setText(binResult, true)
+                        etOctal.setText(octResult, true)
+                        etHexadecimal.setText(hexResult, true)
+                    } catch (e: Throwable) {
+                        Log.e("XYZ-etDecimal", e.message.toString())
+                    }
                 }
 
                 override fun onError(e: Throwable) {
@@ -91,10 +80,20 @@ class MainActivity : AppCompatActivity() {
     private fun <T: EditText> T.observeInput() =
         RxTextView.textChanges(this)
             .skipInitialValue()
-            .observeOn(AndroidSchedulers.mainThread())
             .map(CharSequence::toString)
+            .distinctUntilChanged()
+            .observeOn(AndroidSchedulers.mainThread())
             .publish()
             .refCount()
+
+    private fun TextInputEditText.setText(text: CharSequence, onlyIfChanged: Boolean) {
+        if (onlyIfChanged) {
+            if (Objects.equals(this.text.toString(), text.toString())) {
+                return;
+            }
+        }
+        this.setText(text);
+    }
 
     override fun onDestroy() {
         super.onDestroy()
